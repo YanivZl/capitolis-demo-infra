@@ -1,0 +1,19 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: yanivzl-domain-server
+  namespace: istio-system
+spec:
+  secretName: yanizl-tls
+  commonName: "*.yanivzl.com"
+  isCA: false
+  usages:
+    - server auth
+    - client auth
+  duration: 8760h # 365d
+  renewBefore: 360h # 15d
+  dnsNames:
+  - "*.yanivzl.com"
+  issuerRef:
+    name:  ca-issuer
+    kind: ClusterIssuer
