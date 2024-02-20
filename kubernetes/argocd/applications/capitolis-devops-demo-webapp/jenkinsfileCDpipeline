@@ -1,27 +1,26 @@
 node {
-    def app
+    app = "capitolis-devops-demo-webapp"
 
     stage('Clone repository') {
-      
-
         checkout scm
     }
 
     stage('Update GIT') {
             script {
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    withCredentials([usernamePassword(credentialsId: 'github', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                    withCredentials([usernamePassword(credentialsId: 'Github creds', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
                         //def encodedPassword = URLEncoder.encode("$GIT_PASSWORD",'UTF-8')
                         sh "git config user.email yanivzlotnik1@gmail.com"
-                        sh "git config user.name YanivZlotnik"
+                        sh "git config user.name YanivZl"
                         //sh "git switch master"
-                        filePath = "kubernetes/argocd/applications/capitolis-devops-demo-webapp/charts/values.yaml"
+                        filePath = "kubernetes/argocd/applications/${app}/charts/values.yaml"
                         sh "cat ${filePath}"
-                        sh sh "sed -i '' 's/^  tag:.*/  tag: \"${DOCKERTAG}\"/' ${filePath}"
-                        sh "cat deployment.yaml"
+                        sh "sed -i 's/new_tag/${DOCKERTAG}/g' ${filePath}"
+                        sh "cat ${filePath}"
                         sh "git add ."
                         sh "git commit -m 'Done by Jenkins Job changemanifest: ${env.BUILD_NUMBER}'"
-                        sh "git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/${GIT_USERNAME}/capitolis-devops-demo-webapp.git HEAD:main"
+                        "git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/${GIT_USERNAME}/capitolis-demo-infra.git HEAD:main"
+                        sh "echo ${app} updated to tag ${DOCKERTAG}"
       }
     }
   }
