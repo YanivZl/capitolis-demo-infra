@@ -1,0 +1,29 @@
+jenkinsfileCDpipelinenode {
+    def app
+
+    stage('Clone repository') {
+      
+
+        checkout scm
+    }
+
+    stage('Update GIT') {
+            script {
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    withCredentials([usernamePassword(credentialsId: 'github', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                        //def encodedPassword = URLEncoder.encode("$GIT_PASSWORD",'UTF-8')
+                        sh "git config user.email yanivzlotnik1@gmail.com"
+                        sh "git config user.name YanivZlotnik"
+                        //sh "git switch master"
+                        filePath = "kubernetes/argocd/applications/capitolis-devops-demo-webapp/charts/values.yaml"
+                        sh "cat ${filePath}"
+                        sh sh "sed -i '' 's/^  tag:.*/  tag: \"${DOCKERTAG}\"/' ${filePath}"
+                        sh "cat deployment.yaml"
+                        sh "git add ."
+                        sh "git commit -m 'Done by Jenkins Job changemanifest: ${env.BUILD_NUMBER}'"
+                        sh "git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/${GIT_USERNAME}/kubernetesmanifest.git HEAD:main"
+      }
+    }
+  }
+}
+}

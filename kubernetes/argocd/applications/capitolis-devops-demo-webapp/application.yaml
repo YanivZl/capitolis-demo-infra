@@ -5,11 +5,10 @@ metadata:
   namespace: argocd
 spec:
   project: default
-
   source:
     repoURL: https://gitlab.com/yanivzl/capitolis-demo-infra.git
     targetRevision: HEAD
-    path: dev
+    path: kubernetes/argocd/
   destination: 
     server: https://kubernetes.default.svc
     namespace: default

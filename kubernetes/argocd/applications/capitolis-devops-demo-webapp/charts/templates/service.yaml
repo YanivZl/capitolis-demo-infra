@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "capitolis-devops-demo-webapp.fullname" . }}
+  labels:
+    {{- include "capitolis-devops-demo-webapp.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "capitolis-devops-demo-webapp.selectorLabels" . | nindent 4 }}

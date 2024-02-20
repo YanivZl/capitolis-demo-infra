@@ -261,6 +261,7 @@ controller:
     - docker-workflow:572.v950f58993843
     - aws-credentials:218.v1b_e9466ec5da_
     - multibranch-scan-webhook-trigger:1.0.11
+    - sonar:2.17.2
 
   # Set to false to download the minimum required version of all dependencies.
   installLatestPlugins: true
