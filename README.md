@@ -2,6 +2,7 @@
 
 Welcome to the Infrastructure Repository! This repository contains all the necessary infrastructure as code (IaC) scripts, configurations, and documentation to manage and provision our task's infrastructure and more.
 
+
 ## Table of Contents
 
 - [Overview](#overview)
