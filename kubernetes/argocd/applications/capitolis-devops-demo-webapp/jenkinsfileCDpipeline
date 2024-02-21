@@ -12,7 +12,7 @@ node {
                 sh "git config user.name YanivZl"
                 filePath = "kubernetes/argocd/applications/${app}/charts/values.yaml"
                 sh "cat ${filePath}"
-                sh "sed -i 's/new_tag/${DOCKERTAG}/g' ${filePath}"
+                sh "sed -i 's/tag: \"[0-9]*\"/tag: \"${DOCKERTAG}\"/g' ${filePath}"
                 sh "cat ${filePath}"
                 sh "git add ."
                 sh "git commit -m 'Done by Jenkins Job changemanifest: ${env.BUILD_NUMBER}'"
