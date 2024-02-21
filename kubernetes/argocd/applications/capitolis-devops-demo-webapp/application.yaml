@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://gitlab.com/yanivzl/capitolis-demo-infra.git
+    repoURL: https://github.com/yanivzl/capitolis-demo-infra.git
     targetRevision: HEAD
-    path: kubernetes/argocd/
+    path: kubernetes/argocd/applications/capitolis-devops-demo-webapp/charts
   destination: 
     server: https://kubernetes.default.svc
     namespace: default
