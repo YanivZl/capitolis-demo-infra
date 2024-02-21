@@ -8,7 +8,7 @@ image:
   repository: yanivzl/capitolis-devops-demo-webapp
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "new_tag"
+  tag: "13"
   ports:
     - containerPort: 3000
       protocol: TCP
