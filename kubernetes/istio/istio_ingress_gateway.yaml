@@ -13,6 +13,6 @@ spec:
       protocol: HTTPS
     tls:
       mode: SIMPLE                          
-      credentialName: ecommerce-tls-secret 
+      credentialName: yanivzl.com-clusterissuer 
     hosts:
     - "*"

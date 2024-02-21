@@ -1,0 +1,20 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: application-virtualservice
+  namespace: default
+spec:
+  hosts:
+  - "k8s-istiosys-albgatew-a1bdabfc72-1162533468.us-west-2.elb.amazonaws.com"
+  - "yanivzl.com"
+  gateways:
+  - default-ingressgateway
+  http:
+  - route:
+    - destination:
+        host: capitolis-devops-demo-webapp
+        port:
+          number: 80
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
