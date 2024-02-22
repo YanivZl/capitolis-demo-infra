@@ -6,13 +6,12 @@ metadata:
 spec:
   hosts:
   - "k8s-istiosys-albgatew-a1bdabfc72-1162533468.us-west-2.elb.amazonaws.com"
-  - "yanivzl.com"
   gateways:
-  - default-ingressgateway
+  - default-gateway
   http:
   - route:
     - destination:
-        host: capitolis-devops-demo-webapp
+        host: capitolis-devops-demo-web-app-capitolis-devops-demo-webapp
         port:
           number: 80
     retries:

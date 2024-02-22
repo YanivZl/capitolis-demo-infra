@@ -1,13 +1,14 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress 
 metadata: 
-  name: alb-gateway-ingress
-  namespace: istio-system
+  name: alb-ingress-gateway
+  namespace: istio-ingress
   annotations: 
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/healthcheck-path: /healthz/ready
     alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
     alb.ingress.kubernetes.io/backend-protocol: HTTPS
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
     alb.ingress.kubernetes.io/actions.ssl-redirect: |
@@ -22,7 +23,7 @@ metadata:
     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:099388283273:certificate/ca624c14-b354-4d27-a036-4db6ee682a30
 spec:
   rules:
-  - host: yanivzl.com
+  - host: "k8s-istiosys-albgatew-a1bdabfc72-1162533468.us-west-2.elb.amazonaws.com"
     http:
       paths:      
       - backend:
@@ -31,7 +32,7 @@ spec:
             port: 
               name: use-annotation
         path: /    
-        pathType: Prefix  
+        pathType: Prefix
       - backend:
           service:
             name: istio-ingressgateway
@@ -41,152 +42,200 @@ spec:
         pathType: Prefix
       - backend:
           service:
-            name: istio-ingressgateway
-            port: 
-              number: 443
-        path: /
-        pathType: Prefix 
-  - host: jenkins.yanivzl.com
-    http:
-      paths:      
-      - backend:
-          service:
-            name: ssl-redirect
-            port: 
-              name: use-annotation
-        path: /    
-        pathType: Prefix  
-      - backend:
-          service:
-            name: istio-ingressgateway
-            port: 
-              number: 15021
-        path: /healthz/ready
-        pathType: Prefix
-      - backend:
-          service:
-            name: istio-ingressgateway
+            name: istio-ingress
             port: 
               number: 443
         path: /
         pathType: Prefix
-  - host: grafana.yanivzl.com
-    http:
-      paths:      
-      - backend:
-          service:
-            name: ssl-redirect
-            port: 
-              name: use-annotation
-        path: /    
-        pathType: Prefix  
-      - backend:
-          service:
-            name: istio-ingressgateway
-            port: 
-              number: 15021
-        path: /healthz/ready
-        pathType: Prefix
-      - backend:
-          service:
-            name: istio-ingressgateway
-            port: 
-              number: 443
-        path: /
-        pathType: Prefix
-  - host: prometheus.yanivzl.com
-    http:
-      paths:      
-      - backend:
-          service:
-            name: ssl-redirect
-            port: 
-              name: use-annotation
-        path: /    
-        pathType: Prefix  
-      - backend:
-          service:
-            name: istio-ingressgateway
-            port: 
-              number: 15021
-        path: /healthz/ready
-        pathType: Prefix
-      - backend:
-          service:
-            name: istio-ingressgateway
-            port: 
-              number: 443
-        path: /
-        pathType: Prefix
-  - host: zipkin.yanivzl.com
-    http:
-      paths:      
-      - backend:
-          service:
-            name: ssl-redirect
-            port: 
-              name: use-annotation
-        path: /    
-        pathType: Prefix  
-      - backend:
-          service:
-            name: istio-ingressgateway
-            port: 
-              number: 15021
-        path: /healthz/ready
-        pathType: Prefix
-      - backend:
-          service:
-            name: istio-ingressgateway
-            port: 
-              number: 443
-        path: /
-        pathType: Prefix
-  - host: argocd.yanivzl.com
-    http:
-      paths:      
-      - backend:
-          service:
-            name: ssl-redirect
-            port: 
-              name: use-annotation
-        path: /    
-        pathType: Prefix  
-      - backend:
-          service:
-            name: istio-ingressgateway
-            port: 
-              number: 15021
-        path: /healthz/ready
-        pathType: Prefix
-      - backend:
-          service:
-            name: istio-ingressgateway
-            port: 
-              number: 443
-        path: /
-        pathType: Prefix 
-  - host: kiali.yanivzl.com
-    http:
-      paths:      
-      - backend:
-          service:
-            name: ssl-redirect
-            port: 
-              name: use-annotation
-        path: /    
-        pathType: Prefix  
-      - backend:
-          service:
-            name: istio-ingressgateway
-            port: 
-              number: 15021
-        path: /healthz/ready
-        pathType: Prefix
-      - backend:
-          service:
-            name: istio-ingressgateway
-            port: 
-              number: 443
-        path: /
-        pathType: Prefix  
+  # - host: "k8s-istiosys-albgatew-a1bdabfc72-1162533468.us-west-2.elb.amazonaws.com"
+  #   http:
+  #     paths:      
+  #     - backend:
+  #         service:
+  #           name: ssl-redirect
+  #           port: 
+  #             name: use-annotation
+  #       path: /    
+  #       pathType: Prefix  
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 15021
+  #       path: /healthz/ready
+  #       pathType: Prefix
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 443
+  #       path: /
+  #       pathType: Prefix
+  # - host: "jenkins.yanivzl.com"
+  #   http:
+  #     paths:      
+  #     - backend:
+  #         service:
+  #           name: ssl-redirect
+  #           port: 
+  #             name: use-annotation
+  #       path: /    
+  #       pathType: Prefix  
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 15021
+  #       path: /healthz/ready
+  #       pathType: Prefix
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 443
+  #       path: /
+  #       pathType: Prefix
+  # - host: "grafana.yanivzl.com"
+  #   http:
+  #     paths:      
+  #     - backend:
+  #         service:
+  #           name: ssl-redirect
+  #           port: 
+  #             name: use-annotation
+  #       path: /    
+  #       pathType: Prefix  
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 15021
+  #       path: /healthz/ready
+  #       pathType: Prefix
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 443
+  #       path: /
+  #       pathType: Prefix
+  # - host: "prometheus.yanivzl.com"
+  #   http:
+  #     paths:      
+  #     - backend:
+  #         service:
+  #           name: ssl-redirect
+  #           port: 
+  #             name: use-annotation
+  #       path: /    
+  #       pathType: Prefix  
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 15021
+  #       path: /healthz/ready
+  #       pathType: Prefix
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 443
+  #       path: /
+  #       pathType: Prefix
+  # - host: "zipkin.yanivzl.com"
+  #   http:
+  #     paths:      
+  #     - backend:
+  #         service:
+  #           name: ssl-redirect
+  #           port: 
+  #             name: use-annotation
+  #       path: /    
+  #       pathType: Prefix  
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 15021
+  #       path: /healthz/ready
+  #       pathType: Prefix
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 443
+  #       path: /
+  #       pathType: Prefix
+  # - host: "argocd.yanivzl.com"
+  #   http:
+  #     paths:      
+  #     - backend:
+  #         service:
+  #           name: ssl-redirect
+  #           port: 
+  #             name: use-annotation
+  #       path: /    
+  #       pathType: Prefix  
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 15021
+  #       path: /healthz/ready
+  #       pathType: Prefix
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 443
+  #       path: /
+  #       pathType: Prefix 
+  # - host: "kiali.yanivzl.com"
+  #   http:
+  #     paths:      
+  #     - backend:
+  #         service:
+  #           name: ssl-redirect
+  #           port: 
+  #             name: use-annotation
+  #       path: /    
+  #       pathType: Prefix  
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 15021
+  #       path: /healthz/ready
+  #       pathType: Prefix
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 443
+  #       path: /
+  #       pathType: Prefix
+  # - host: "yanivzl.com"
+  #   http:
+  #     paths:      
+  #     - backend:
+  #         service:
+  #           name: ssl-redirect
+  #           port: 
+  #             name: use-annotation
+  #       path: /    
+  #       pathType: Prefix  
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 15021
+  #       path: /healthz/ready
+  #       pathType: Prefix
+  #     - backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port: 
+  #             number: 443
+  #       path: /
+  #       pathType: Prefix   

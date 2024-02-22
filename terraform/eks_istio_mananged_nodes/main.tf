@@ -1,36 +1,6 @@
-provider "aws" {
-  region = var.region
-}
-
-provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  token                  = data.aws_eks_cluster_auth.this.token
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    command     = "aws"
-    # This requires the awscli to be installed locally where Terraform is executed
-    args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
-  }
-}
-
-provider "helm" {
-  kubernetes {
-    host                   = module.eks.cluster_endpoint
-    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "aws"
-      # This requires the awscli to be installed locally where Terraform is executed
-      args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
-    }
-  }
-}
-
 locals {
   tags = {
-    Name  = var.cluster_name
+    Name        = var.cluster_name
     Environment = "Prod"
     Description = "Capitolis DevOps Task"
   }
@@ -68,7 +38,7 @@ module "eks" {
   }
 
   iam_role_additional_policies = {
-      AmazonEBSCSIDriverPolicy  = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+    AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
   }
 
   vpc_id     = module.vpc.vpc_id
@@ -85,11 +55,11 @@ module "eks" {
   }
 
   eks_managed_node_group_defaults = {
-    ami_type       = "AL2_x86_64"
-    instance_types = ["t3.medium"]
+    ami_type                              = "AL2_x86_64"
+    instance_types                        = ["t3.medium"]
     attach_cluster_primary_security_group = false
-    iam_role_additional_policies = { 
-      AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy" 
+    iam_role_additional_policies = {
+      AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
     }
   }
 
@@ -160,21 +130,30 @@ module "eks_blueprints_addons" {
     module.eks
   ]
 
-  enable_argocd                                = true
-  enable_argo_rollouts                         = true
-  enable_argo_workflows                        = true
-  enable_aws_cloudwatch_metrics                = true
-  enable_aws_privateca_issuer                  = true
-  enable_cluster_autoscaler                    = true
-  enable_metrics_server                        = true
-
-  # Wait for all Cert-manager related resources to be ready
-  enable_cert_manager = true
-  cert_manager = {
-    wait = true
+  # Add-ons
+  enable_argocd                 = true
+  enable_argo_rollouts          = true
+  enable_argo_workflows         = true
+  enable_aws_cloudwatch_metrics = true
+  enable_cluster_autoscaler     = true
+  enable_metrics_server         = true
+  enable_cert_manager           = true
+  enable_aws_privateca_issuer   = true
+  aws_privateca_issuer = {
+    acmca_arn        = aws_acmpca_certificate_authority.this.arn
+    namespace        = "aws-privateca-issuer"
+    create_namespace = true
   }
 
   helm_releases = {
+    cert-manager-csi-driver = {
+      description   = "Cert Manager CSI Driver Add-on"
+      chart         = "cert-manager-csi-driver"
+      namespace     = "cert-manager"
+      chart_version = "v0.5.0"
+      repository    = "https://charts.jetstack.io"
+    }
+
     istio-base = {
       chart         = "base"
       chart_version = var.istio_chart_version
@@ -213,12 +192,13 @@ module "eks_blueprints_addons" {
               istio = "ingressgateway"
             }
             service = {
-              annotations = {
-                "service.beta.kubernetes.io/aws-load-balancer-type"            = "external"
-                "service.beta.kubernetes.io/aws-load-balancer-nlb-target-type" = "ip"
-                "service.beta.kubernetes.io/aws-load-balancer-scheme"          = "internet-facing"
-                "service.beta.kubernetes.io/aws-load-balancer-attributes"      = "load_balancing.cross_zone.enabled=true"
-              }
+              type = "NodePort"
+              # annotations = {
+              #   "service.beta.kubernetes.io/aws-load-balancer-type"            = "external"
+              #   "service.beta.kubernetes.io/aws-load-balancer-nlb-target-type" = "ip"
+              #   "service.beta.kubernetes.io/aws-load-balancer-scheme"          = "internet-facing"
+              #   "service.beta.kubernetes.io/aws-load-balancer-attributes"      = "load_balancing.cross_zone.enabled=true"
+              # }
             }
           }
         )
@@ -251,40 +231,161 @@ module "eks_blueprints_addons" {
   tags = local.tags
 }
 
+#-------------------------------
+# Associates a certificate with an AWS Certificate Manager Private Certificate Authority (ACM PCA Certificate Authority).
+# An ACM PCA Certificate Authority is unable to issue certificates until it has a certificate associated with it.
+# A root level ACM PCA Certificate Authority is able to self-sign its own root certificate.
+#-------------------------------
+
+resource "aws_acmpca_certificate_authority" "this" {
+  type = "ROOT"
+
+  certificate_authority_configuration {
+    key_algorithm     = "RSA_4096"
+    signing_algorithm = "SHA512WITHRSA"
+
+    subject {
+      common_name = var.certificate_dns
+    }
+  }
+
+  tags = local.tags
+}
+
+resource "aws_acmpca_certificate" "this" {
+  certificate_authority_arn   = aws_acmpca_certificate_authority.this.arn
+  certificate_signing_request = aws_acmpca_certificate_authority.this.certificate_signing_request
+  signing_algorithm           = "SHA512WITHRSA"
+
+  template_arn = "arn:aws:acm-pca:::template/RootCACertificate/V1"
+
+  validity {
+    type  = "YEARS"
+    value = 10
+  }
+}
+
+resource "aws_acmpca_certificate_authority_certificate" "this" {
+  certificate_authority_arn = aws_acmpca_certificate_authority.this.arn
+
+  certificate       = aws_acmpca_certificate.this.certificate
+  certificate_chain = aws_acmpca_certificate.this.certificate_chain
+}
+
+#-------------------------------
+#  This resource creates a CRD of AWSPCAClusterIssuer Kind, which then represents the ACM PCA in K8
+#-------------------------------
+
+# Using kubectl to workaround kubernetes provider issue https://github.com/hashicorp/terraform-provider-kubernetes/issues/1453
+resource "kubectl_manifest" "cluster_pca_issuer" {
+  yaml_body = yamlencode({
+    apiVersion = "awspca.cert-manager.io/v1beta1"
+    kind       = "AWSPCAClusterIssuer"
+
+    metadata = {
+      name = module.eks.cluster_name
+    }
+
+    spec = {
+      arn = aws_acmpca_certificate_authority.this.arn
+      region : var.region
+    }
+  })
+
+  depends_on = [
+    module.eks_blueprints_addons
+  ]
+}
+
 ################################################################################
 # Kubernetes Manifests
 ################################################################################
 
-resource "kubernetes_manifest" "istio_alb_ingress" {
-  manifest = yamldecode(file("../../kubernetes/istio/istio_alb_ingress.yaml"))
+# data "kubectl_filename_list" "manifests" {
+#     pattern = "../../kubernetes/*/*.yaml"
+# }
+
+# resource "kubectl_manifest" "k8s_manifests" {
+#     count = length(data.kubectl_filename_list.manifests.matches)
+#     yaml_body = file(element(data.kubectl_filename_list.manifests.matches, count.index))
+# }
+
+resource "kubectl_manifest" "istio_alb_ingress" {
+  yaml_body = file("../../kubernetes/istio/istio_alb_ingress.yaml")
 }
 
-resource "kubernetes_manifest" "istio_ingress_gateway" {
-  manifest = yamldecode(file("../../kubernetes/istio/istio_alb_ingress.yaml"))
+resource "kubectl_manifest" "istio_default_gateway" {
+  yaml_body = file("../../kubernetes/istio/istio_default_gateway.yaml")
 }
 
-resource "kubernetes_manifest" "cert_manager_ca_certificate" {
-  manifest = yamldecode(file("../../kubernetes/istio/istio_alb_ingress.yaml"))
+resource "kubectl_manifest" "istio_virtualservice_application" {
+  yaml_body = file("../../kubernetes/istio/istio_virtualservice_application.yaml")
 }
 
-resource "kubernetes_manifest" "cert_manager_ca_issuer" {
-  manifest = yamldecode(file("../../kubernetes/istio/istio_alb_ingress.yaml"))
+resource "kubectl_manifest" "istio_virtualservice_argocd" {
+  yaml_body = file("../../kubernetes/istio/istio_virtualservice_argocd.yaml")
 }
 
-resource "kubernetes_manifest" "cert_manager_certifiacte" {
-  manifest = yamldecode(file("../../kubernetes/istio/istio_alb_ingress.yaml"))
+resource "kubectl_manifest" "jenkins_service_account" {
+  yaml_body = file("../../kubernetes/jenkins/manifests/jenkins-service-account.yaml")
 }
 
-resource "kubernetes_manifest" "cert_manager_selfsigned_issuer" {
-  manifest = yamldecode(file("../../kubernetes/istio/istio_alb_ingress.yaml"))
-}
+# resource "kubectl_manifest" "cert_manager_ca_certificate" {
+#   yaml_body = file("../../kubernetes/cert_manager/ca-certificate.yaml")
+# }
 
-resource "kubernetes_manifest" "istio_virtual_services" {
-  manifest = yamldecode(file("../../kubernetes/istio/istio_alb_ingress.yaml"))
-}
+# resource "kubectl_manifest" "cert_manager_ca_issuer" {
+#   yaml_body = file("../../kubernetes/cert_manager/ca-issuer.yaml")
+# }
 
-resource "kubernetes_manifest" "jenkins_service_account" {
-  manifest = yamldecode(file("../../kubernetes/jenkins/manifests/jenkins-service-account.yaml"))
+# resource "kubectl_manifest" "cert_manager_certifiacte" {
+#   yaml_body = file("../../kubernetes/cert_manager/certificate.yaml")
+# }
+
+# resource "kubectl_manifest" "cert_manager_selfsigned_issuer" {
+#   yaml_body = file("../../kubernetes/cert_manager/selfsigned-issuer.yaml")
+# }
+
+#-------------------------------
+# This resource creates a CRD of Certificate Kind, which then represents certificate issued from ACM PCA,
+# mounted as K8 secret
+#-------------------------------
+
+# Using kubectl to workaround kubernetes provider issue https://github.com/hashicorp/terraform-provider-kubernetes/issues/1453
+resource "kubectl_manifest" "pca_certificate" {
+  yaml_body = yamlencode({
+    apiVersion = "cert-manager.io/v1"
+    kind       = "Certificate"
+
+    metadata = {
+      name      = var.certificate_name
+      namespace = "default"
+    }
+
+    spec = {
+      commonName = var.certificate_dns
+      duration   = "2160h0m0s"
+      issuerRef = {
+        group = "awspca.cert-manager.io"
+        kind  = "AWSPCAClusterIssuer"
+        name : module.eks.cluster_name
+      }
+      renewBefore = "360h0m0s"
+      secretName  = join("-", [var.certificate_name, "clusterissuer"]) # This is the name with which the K8 Secret will be available
+      usages = [
+        "server auth",
+        "client auth"
+      ]
+      privateKey = {
+        algorithm : "RSA"
+        size : 2048
+      }
+    }
+  })
+
+  depends_on = [
+    kubectl_manifest.cluster_pca_issuer,
+  ]
 }
 
 ################################################################################

@@ -7,7 +7,7 @@ spec:
   hosts:
   - "argocd.yanivzl.com"
   gateways:
-  - default-ingressgateway
+  - default-gateway
   http:
   - route:
     - destination:
