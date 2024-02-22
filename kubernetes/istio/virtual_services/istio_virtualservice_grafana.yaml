@@ -1,0 +1,19 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: grafana-virtualservice
+  namespace: istio-ingress
+spec:
+  hosts:
+  - "grafana.yanivzl.com"
+  gateways:
+  - default-gateway
+  http:
+  - route:
+    - destination:
+        host: grafana.istio-system.svc.cluster.local
+        port:
+          number: 3000
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
